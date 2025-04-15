@@ -1,13 +1,12 @@
 <template>
-    <div class="flex min-h-screen">
-      <Sidebar />
-      <main class="flex-1 p-6 bg-gray-50">
-        <RouterView />
-      </main>
-    </div>
-  </template>
-  
-  <script setup>
-  import Sidebar from '@/components/Sidebar.vue'
-  </script>
-  
+  <div class="flex min-h-screen bg-gray-50">
+    <Sidebar />
+    <main class="ml-60 flex-1 p-8">
+      <RouterView />
+    </main>
+  </div>
+</template>
+
+<script setup>
+import Sidebar from '@/components/Sidebar.vue'
+</script>
