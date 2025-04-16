@@ -40,40 +40,45 @@ const email = ref('')
 const password = ref('')
 const error = ref(null)
 const router = useRouter()
+const store = useUserStore()
 
 const login = async () => {
   error.value = null
 
-  const { data, error: authError } = await supabase.auth.signInWithPassword({
+  // 1️⃣ 로그인 시도
+  const { data: sessionData, error: loginError } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value,
   })
 
-  if (authError) {
-    error.value = authError.message
+  if (loginError) {
+    error.value = loginError.message
     return
   }
 
+  // 2️⃣ 현재 로그인된 유저 정보 가져오기
   const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError) {
-    error.value = userError.message
+
+  if (userError || !userData?.user) {
+    error.value = userError?.message || '유저 정보를 불러올 수 없습니다.'
     return
   }
 
   const user = userData.user
 
-  const { data: userInfo, error: fetchError } = await supabase
+  // 3️⃣ users 테이블에서 사용자 정보 조회 (이름, 역할 등)
+  const { data: userInfo, error: userInfoError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (fetchError) {
-    error.value = fetchError.message
+  if (userInfoError) {
+    error.value = userInfoError.message
     return
   }
 
-  const store = useUserStore()
+  // 4️⃣ Pinia 저장 및 이동
   store.setUser(userInfo)
   router.push('/dashboard')
 }
