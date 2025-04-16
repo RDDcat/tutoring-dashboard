@@ -7,7 +7,16 @@ const user = useUserStore()
 
 const children = ref([])
 const studentId = ref('')
-const month = ref(new Date().toISOString().slice(0, 7))
+
+// ✅ 전월 계산 로직 (로컬 기준 정확하게)
+const pad = (n) => n.toString().padStart(2, '0')
+const now = new Date()
+const prevMonthStr =
+  now.getMonth() === 0
+    ? `${now.getFullYear() - 1}-12`
+    : `${now.getFullYear()}-${pad(now.getMonth())}`
+
+const month = ref(prevMonthStr)
 
 const midReport = ref('')
 const endReport = ref('')
@@ -31,7 +40,7 @@ onMounted(async () => {
 
     children.value = validChildren
 
-    // ✅ 첫 번째 자녀 자동 선택
+    // ✅ 자녀가 있다면 첫 번째 자녀를 자동 선택
     if (validChildren.length > 0) {
       studentId.value = validChildren[0].id
     }

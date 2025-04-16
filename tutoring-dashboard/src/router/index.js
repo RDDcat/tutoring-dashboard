@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 import Login from '@/pages/Login.vue'
-import Dashboard from '@/pages/Dashboard.vue'
+import ParentDashboard from '@/pages/ParentDashboard.vue'
+import TeacherDashboard from '@/pages/TeacherDashboard.vue'
 import Calendar from '@/pages/Calendar.vue'
 import LessonReport from '@/pages/LessonReport.vue'
 import ReportEditor from '@/pages/ReportEditor.vue'
@@ -13,7 +14,13 @@ import Students from '@/pages/Students.vue'
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
-  { path: '/dashboard', component: Dashboard },
+  {
+    path: '/dashboard',
+    component: () => {
+      const role = useUserStore().role
+      return role === 'parent' ? ParentDashboard : TeacherDashboard
+    },
+  },
 
   // ✅ 선생님 전용
   { path: '/students', component: Students, meta: { role: 'teacher' } },

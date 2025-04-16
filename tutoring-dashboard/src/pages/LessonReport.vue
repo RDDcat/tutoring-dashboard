@@ -1,120 +1,127 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useUserStore } from '@/stores/user'
 
 const user = useUserStore()
+
 const students = ref([])
 const studentId = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
-
+const startTime = ref('')
+const endTime = ref('')
 const publicNote = ref('')
 const privateNote = ref('')
-const reportId = ref(null) // 기존 리포트 ID 저장
+const existingId = ref(null)
 const message = ref('')
 const error = ref('')
-const loading = ref(false)
 
 onMounted(async () => {
-  const { data, error: err } = await supabase
-    .from('students')
-    .select('id, name')
-    .eq('teacher_id', user.id)
+  const { data } = await supabase.from('students').select('id, name').eq('teacher_id', user.id)
 
-  console.log('👨‍🏫 불러온 학생:', data, err) // 이거 확인!!
-  if (!err) {
-    students.value = data
-  }
+  students.value = data
+
+  // ✅ 첫 번째 학생 자동 선택
+  if (data?.length) studentId.value = data[0].id
 })
 
-// ✅ 학생 or 날짜 변경 시 기존 리포트 자동 조회
+// 수업 데이터가 이미 존재하는지 확인 (같은 날짜+학생)
 watch([studentId, date], async () => {
-  publicNote.value = ''
-  privateNote.value = ''
-  reportId.value = null
   if (!studentId.value || !date.value) return
 
-  const { data, error: fetchError } = await supabase
+  const { data } = await supabase
     .from('lessons')
     .select('*')
     .eq('student_id', studentId.value)
     .eq('date', date.value)
     .maybeSingle()
 
-  if (!fetchError && data) {
+  if (data) {
+    startTime.value = data.start_time || ''
+    endTime.value = data.end_time || ''
     publicNote.value = data.public_note || ''
     privateNote.value = data.private_note || ''
-    reportId.value = data.id
+    existingId.value = data.id
+  } else {
+    startTime.value = ''
+    endTime.value = ''
+    publicNote.value = ''
+    privateNote.value = ''
+    existingId.value = null
   }
 })
 
-const saveReport = async () => {
-  if (!studentId.value || !date.value) {
-    error.value = '학생과 날짜를 선택해주세요.'
-    return
-  }
-
+const saveLesson = async () => {
   error.value = ''
   message.value = ''
-  loading.value = true
+
+  if (!studentId.value || !date.value || !startTime.value || !endTime.value) {
+    error.value = '학생, 날짜, 시간은 필수 입력입니다.'
+    return
+  }
 
   const payload = {
     student_id: studentId.value,
     date: date.value,
+    start_time: startTime.value,
+    end_time: endTime.value,
     public_note: publicNote.value,
     private_note: privateNote.value,
   }
 
-  const { error: saveError } = reportId.value
-    ? await supabase.from('lessons').update(payload).eq('id', reportId.value)
+  const { error: dbError } = existingId.value
+    ? await supabase.from('lessons').update(payload).eq('id', existingId.value)
     : await supabase.from('lessons').insert(payload)
 
-  loading.value = false
-
-  if (saveError) {
-    error.value = saveError.message
+  if (dbError) {
+    error.value = dbError.message
   } else {
-    message.value = reportId.value ? '리포트가 수정되었습니다.' : '리포트가 저장되었습니다!'
+    message.value = existingId.value ? '수업 정보를 수정했습니다.' : '수업 정보를 저장했습니다.'
   }
 }
 </script>
 
 <template>
   <div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-gray-800">📝 수업 리포트 작성</h1>
+    <h1 class="text-2xl font-bold text-gray-800">📘 수업 정보 작성</h1>
 
     <div class="space-y-2">
-      <label class="block font-medium text-gray-700">학생 선택</label>
+      <label class="block font-medium">학생</label>
       <select v-model="studentId" class="w-full p-2 border rounded">
         <option disabled value="">학생을 선택하세요</option>
         <option v-for="s in students" :key="s.id" :value="s.id">{{ s.name }}</option>
       </select>
     </div>
 
-    <div class="space-y-2">
-      <label class="block font-medium text-gray-700">수업 날짜</label>
-      <input v-model="date" type="date" class="w-full p-2 border rounded" />
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block font-medium">수업 날짜</label>
+        <input type="date" v-model="date" class="w-full p-2 border rounded" />
+      </div>
+      <div>
+        <label class="block font-medium">시간</label>
+        <div class="flex space-x-2">
+          <input type="time" v-model="startTime" class="p-2 border rounded w-1/2" />
+          <input type="time" v-model="endTime" class="p-2 border rounded w-1/2" />
+        </div>
+      </div>
     </div>
 
     <div class="space-y-2">
-      <label class="block font-medium text-gray-700">📢 공개 내용</label>
-      <textarea v-model="publicNote" rows="4" class="w-full p-2 border rounded resize-none" />
+      <label class="block font-medium">📢 학부모 공개 메모</label>
+      <textarea v-model="publicNote" class="w-full p-2 border rounded resize-none" rows="4" />
     </div>
 
     <div class="space-y-2">
-      <label class="block font-medium text-gray-700">🔒 비공개 메모</label>
-      <textarea v-model="privateNote" rows="4" class="w-full p-2 border rounded resize-none" />
+      <label class="block font-medium">🔒 선생님 전용 메모</label>
+      <textarea v-model="privateNote" class="w-full p-2 border rounded resize-none" rows="4" />
     </div>
 
-    <button
-      @click="saveReport"
-      :disabled="loading"
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-    >
-      💾 저장하기
+    <button @click="saveLesson" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      저장하기
     </button>
 
-    <p v-if="message" class="text-green-600 font-medium mt-2">{{ message }}</p>
-    <p v-if="error" class="text-red-500 font-medium mt-2">{{ error }}</p>
+    <p v-if="message" class="text-green-600">{{ message }}</p>
+    <p v-if="error" class="text-red-500">{{ error }}</p>
   </div>
 </template>
