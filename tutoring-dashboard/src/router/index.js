@@ -1,3 +1,5 @@
+// src/router/index.ts
+
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -14,11 +16,20 @@ import Students from '@/pages/Students.vue'
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
+
+  // ✅ 권한에 따라 리디렉션만 하는 대시보드 경로
   {
     path: '/dashboard',
-    component: () => {
-      const role = useUserStore().role
-      return role === 'parent' ? ParentDashboard : TeacherDashboard
+    component: {
+      render() {
+        return null
+      },
+    },
+    beforeEnter: (to, from, next) => {
+      const { role } = useUserStore()
+      if (role === 'parent') next('/report-viewer')
+      else if (role === 'teacher') next('/students')
+      else next('/login')
     },
   },
 
@@ -43,6 +54,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.path === '/login') return next()
   if (!userStore.id) return next('/login')
+
   if (to.meta.role && userStore.role !== to.meta.role) {
     alert('접근 권한이 없습니다.')
     return next('/dashboard')

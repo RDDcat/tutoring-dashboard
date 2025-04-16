@@ -82,5 +82,4 @@ const login = async () => {
   store.setUser(userInfo)
   router.push('/dashboard')
 }
-console.log('SUPABASE VERSION TEST:', supabase.auth.signInWithPassword)
 </script>
