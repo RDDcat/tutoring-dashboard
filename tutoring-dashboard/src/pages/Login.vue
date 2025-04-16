@@ -54,24 +54,27 @@ const login = async () => {
     return
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const { data: userInfo, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
+  const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) {
     error.value = userError.message
     return
   }
 
+  const user = userData.user
+
+  const { data: userInfo, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (fetchError) {
+    error.value = fetchError.message
+    return
+  }
+
   const store = useUserStore()
   store.setUser(userInfo)
-
   router.push('/dashboard')
 }
 </script>
