@@ -3,88 +3,100 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useUserStore } from '@/stores/user'
 
+// 유저 스토어
 const user = useUserStore()
-const children = ref([])
 
-const thisMonthStats = ref({ lessons: 0, hours: 0, mid: 0, end: 0 })
-const prevMonthStats = ref({ lessons: 0, hours: 0, mid: 0, end: 0 })
+const children = ref([])
+const studentId = ref(null)
+
+const thisMonth = new Date().toISOString().slice(0, 7)
+const prevMonth = (() => {
+  const now = new Date()
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1)
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+})()
+
+const thisMonthStats = ref({
+  lessons: 0,
+  hours: 0,
+  mid: 0,
+  end: 0,
+})
+const prevMonthStats = ref({
+  lessons: 0,
+  hours: 0,
+  mid: 0,
+  end: 0,
+})
 const error = ref('')
 
-// 📅 로컬 기준으로 정확한 YYYY-MM
-const pad = (n) => n.toString().padStart(2, '0')
-const now = new Date()
-
-const thisMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}` // 4월 → '2025-04'
-const prevMonth =
-  now.getMonth() === 0
-    ? `${now.getFullYear() - 1}-12`
-    : `${now.getFullYear()}-${pad(now.getMonth())}` // 3월 → '2025-03'
-
 onMounted(async () => {
-  const { data: childData, error: fetchError } = await supabase
+  // 부모가 연결된 자녀 조회
+  const { data, error: err } = await supabase
     .from('parents_students')
-    .select('student_id, students(id)')
+    .select('student_id, students(id, name)')
     .eq('parent_id', user.id)
 
-  if (fetchError) {
-    error.value = '자녀 조회에 실패했습니다.'
+  if (err) {
+    error.value = '자녀 정보를 불러오지 못했습니다.'
     return
   }
 
-  const childList = (childData || []).filter((d) => d.students).map((d) => d.students.id)
+  const validChildren = (data || [])
+    .filter((d) => d.students)
+    .map((d) => ({
+      id: d.students.id,
+      name: d.students.name,
+    }))
 
-  children.value = childList
+  children.value = validChildren
+  if (validChildren.length === 0) return
 
-  await loadStats(thisMonth, thisMonthStats)
-  await loadStats(prevMonth, prevMonthStats)
+  studentId.value = validChildren[0].id
+  await fetchStats()
 })
 
-const loadStats = async (month, targetRef) => {
-  if (!children.value.length) return
-
-  const monthStart = `${month}-01`
-  const monthEnd = new Date(
-    new Date(monthStart).getFullYear(),
-    new Date(monthStart).getMonth() + 1,
-    0,
-  )
-    .toISOString()
-    .slice(0, 10)
+async function fetchStats() {
+  if (!studentId.value) return
 
   const { data: lessons } = await supabase
     .from('lessons')
-    .select('start_time, end_time, date, student_id')
-    .in('student_id', children.value)
-    .gte('date', monthStart)
-    .lte('date', monthEnd)
-
-  const lessonCount = lessons.length
-  const totalHour = lessons.reduce((sum, l) => {
-    if (l.start_time && l.end_time) {
-      const start = new Date(`2000-01-01T${l.start_time}`)
-      const end = new Date(`2000-01-01T${l.end_time}`)
-      return sum + (end - start) / (1000 * 60 * 60)
-    }
-    return sum
-  }, 0)
+    .select('date, start_time, end_time')
+    .eq('student_id', studentId.value)
 
   const { data: reports } = await supabase
     .from('reports')
-    .select('type, student_id')
-    .in('student_id', children.value)
-    .eq('month', month)
+    .select('type, month')
+    .eq('student_id', studentId.value)
 
-  const midCount = reports.filter((r) => r.type === '중간').length
-  const endCount = reports.filter((r) => r.type === '월말').length
+  const calcStats = (month) => {
+    const lessonsInMonth = lessons.filter((l) => l.date?.startsWith(month))
+    const hours = lessonsInMonth.reduce((acc, cur) => {
+      const start = cur.start_time
+      const end = cur.end_time
+      if (!start || !end) return acc
+      const startH = Number(start.split(':')[0])
+      const endH = Number(end.split(':')[0])
+      return acc + (endH - startH)
+    }, 0)
 
-  targetRef.value = {
-    lessons: lessonCount,
-    hours: totalHour,
-    mid: midCount,
-    end: endCount,
+    const monthReports = reports.filter((r) => r.month === month)
+    const mid = monthReports.filter((r) => r.type === '중간').length
+    const end = monthReports.filter((r) => r.type === '월말').length
+
+    return {
+      lessons: lessonsInMonth.length,
+      hours,
+      mid,
+      end,
+    }
   }
+
+  thisMonthStats.value = calcStats(thisMonth)
+  prevMonthStats.value = calcStats(prevMonth)
 }
 </script>
+
 <template>
   <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-8">
     <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center sm:text-left">
@@ -92,7 +104,6 @@ const loadStats = async (month, targetRef) => {
     </h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- 당월 -->
       <div class="bg-white border rounded-xl shadow p-5 space-y-2">
         <h2 class="text-base sm:text-lg font-semibold text-blue-700">
           📅 당월 통계 ({{ thisMonth }})
@@ -111,7 +122,6 @@ const loadStats = async (month, targetRef) => {
         </p>
       </div>
 
-      <!-- 전월 -->
       <div class="bg-white border rounded-xl shadow p-5 space-y-2">
         <h2 class="text-base sm:text-lg font-semibold text-purple-700">
           📅 전월 통계 ({{ prevMonth }})
