@@ -1,8 +1,12 @@
 <template>
-  <aside class="w-60 h-screen bg-white border-r shadow-sm fixed top-0 left-0 flex flex-col">
-    <div class="p-6 text-xl font-bold text-blue-600 border-b">과외 대시보드</div>
+  <!-- 사용자 role이 없으면 빈 화면 -->
+  <div v-if="!user.role" class="w-60 bg-white p-4">⏳ 사용자 정보 불러오는 중...</div>
 
-    <nav class="flex-1 p-4 space-y-2">
+  <!-- role 있을 때만 사이드바 렌더 -->
+  <aside v-else class="w-60 h-screen bg-white border-r shadow-sm p-4">
+    <div class="text-lg font-bold text-blue-600 mb-6">과외 대시보드</div>
+
+    <nav class="space-y-2">
       <RouterLink
         v-for="item in menu"
         :key="item.path"
@@ -15,13 +19,13 @@
     </nav>
   </aside>
 </template>
-
 <script setup>
+import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 
 const user = useUserStore()
 
-const menu =
+const menu = computed(() =>
   user.role === 'teacher'
     ? [
         { path: '/dashboard', label: '대시보드' },
@@ -34,5 +38,6 @@ const menu =
         { path: '/dashboard', label: '대시보드' },
         { path: '/child-progress', label: '자녀 현황' },
         { path: '/report-viewer', label: '보고서 열람' },
-      ]
+      ],
+)
 </script>

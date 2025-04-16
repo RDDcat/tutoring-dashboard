@@ -1,33 +1,128 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { supabase } from '@/lib/supabase'
+import { useUserStore } from '@/stores/user'
+
+const user = useUserStore()
+const children = ref([])
+
+const thisMonthStats = ref({ lessons: 0, hours: 0, mid: 0, end: 0 })
+const prevMonthStats = ref({ lessons: 0, hours: 0, mid: 0, end: 0 })
+const error = ref('')
+
+// 📆 날짜 계산
+const now = new Date()
+const thisMonth = now.toISOString().slice(0, 7)
+const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7)
+
+onMounted(async () => {
+  const { data: childData, error: fetchError } = await supabase
+    .from('parents_students')
+    .select('student_id, students(id, name)')
+    .eq('parent_id', user.id)
+
+  if (fetchError) {
+    error.value = '자녀 조회에 실패했습니다.'
+    return
+  }
+
+  const childList = (childData || []).filter((d) => d.students).map((d) => d.students.id)
+
+  children.value = childList
+
+  await loadStats(thisMonth, thisMonthStats)
+  await loadStats(prevMonth, prevMonthStats)
+})
+
+const loadStats = async (month, targetRef) => {
+  if (!children.value.length) return
+
+  const monthStart = `${month}-01`
+  const monthEnd = new Date(
+    new Date(monthStart).getFullYear(),
+    new Date(monthStart).getMonth() + 1,
+    0,
+  )
+    .toISOString()
+    .slice(0, 10)
+
+  // 수업 데이터
+  const { data: lessons } = await supabase
+    .from('lessons')
+    .select('student_id, start_time, end_time, date')
+    .in('student_id', children.value)
+    .gte('date', monthStart)
+    .lte('date', monthEnd)
+
+  const lessonCount = lessons.length
+  const totalHour = lessons.reduce((sum, l) => {
+    if (l.start_time && l.end_time) {
+      const start = new Date(`2000-01-01T${l.start_time}`)
+      const end = new Date(`2000-01-01T${l.end_time}`)
+      return sum + (end - start) / (1000 * 60 * 60)
+    }
+    return sum
+  }, 0)
+
+  // 보고서 데이터
+  const { data: reports } = await supabase
+    .from('reports')
+    .select('student_id, type')
+    .in('student_id', children.value)
+    .eq('month', month)
+
+  const midCount = reports.filter((r) => r.type === '중간').length
+  const endCount = reports.filter((r) => r.type === '월말').length
+
+  targetRef.value = {
+    lessons: lessonCount,
+    hours: totalHour,
+    mid: midCount,
+    end: endCount,
+  }
+}
+</script>
+
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-800">📊 대시보드</h1>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <h1 class="text-2xl font-bold text-gray-800">📊 학부모 대시보드</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-screen-xl mx-auto">
-      <div class="p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition">
-        <h2 class="text-lg font-semibold mb-2 text-blue-700">👨‍🏫 선생님 통계</h2>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>총 수업 횟수: 25회</li>
-          <li>총 수업 시간: 52시간</li>
-          <li>학생 수: 3명</li>
-        </ul>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 당월 -->
+      <div class="bg-white border rounded shadow p-4 space-y-2">
+        <h2 class="font-semibold text-blue-700">📅 당월 통계 ({{ thisMonth }})</h2>
+        <p>
+          수업 횟수: <strong>{{ thisMonthStats.lessons }}</strong> 회
+        </p>
+        <p>
+          총 수업 시간: <strong>{{ thisMonthStats.hours.toFixed(1) }}</strong> 시간
+        </p>
+        <p>
+          중간 보고서: <strong>{{ thisMonthStats.mid }}</strong> 건
+        </p>
+        <p>
+          월말 보고서: <strong>{{ thisMonthStats.end }}</strong> 건
+        </p>
       </div>
 
-      <div class="p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition">
-        <h2 class="text-lg font-semibold mb-2 text-green-700">👨‍👩‍👧 부모 대시보드</h2>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>자녀 수업 진행률: 85%</li>
-          <li>최근 보고서: 2024-03 월말 보고서</li>
-          <li>누적 수업 시간: 14시간</li>
-        </ul>
-      </div>
-
-      <div class="p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition">
-        <h2 class="text-lg font-semibold mb-2 text-purple-700">📅 일정 미리보기</h2>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>다음 수업: 4월 16일</li>
-          <li>월말 보고서 마감: 4월 30일</li>
-        </ul>
+      <!-- 전월 -->
+      <div class="bg-white border rounded shadow p-4 space-y-2">
+        <h2 class="font-semibold text-purple-700">📅 전월 통계 ({{ prevMonth }})</h2>
+        <p>
+          수업 횟수: <strong>{{ prevMonthStats.lessons }}</strong> 회
+        </p>
+        <p>
+          총 수업 시간: <strong>{{ prevMonthStats.hours.toFixed(1) }}</strong> 시간
+        </p>
+        <p>
+          중간 보고서: <strong>{{ prevMonthStats.mid }}</strong> 건
+        </p>
+        <p>
+          월말 보고서: <strong>{{ prevMonthStats.end }}</strong> 건
+        </p>
       </div>
     </div>
+
+    <p v-if="error" class="text-red-500">{{ error }}</p>
   </div>
 </template>
