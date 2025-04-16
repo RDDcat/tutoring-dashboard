@@ -70,38 +70,45 @@ watch([studentId, month], async () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-gray-800">📄 자녀 보고서 열람</h1>
+  <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center sm:text-left">
+      📄 자녀 보고서 열람
+    </h1>
 
-    <div class="space-y-2">
-      <label class="block font-medium">자녀 선택</label>
-      <select v-model="studentId" class="w-full p-2 border rounded">
+    <!-- 자녀 선택 -->
+    <div class="space-y-1">
+      <label class="block font-medium text-sm sm:text-base">자녀 선택</label>
+      <select v-model="studentId" class="block w-full p-2 border rounded-md">
         <option disabled value="">자녀를 선택하세요</option>
         <option v-for="c in children" :key="c.id" :value="c.id">{{ c.name }}</option>
       </select>
     </div>
 
-    <div class="space-y-2">
-      <label class="block font-medium">대상 월</label>
-      <input v-model="month" type="month" class="w-full p-2 border rounded" />
+    <!-- 월 선택 -->
+    <div class="space-y-1">
+      <label class="block font-medium text-sm sm:text-base">대상 월</label>
+      <input v-model="month" type="month" class="block w-full p-2 border rounded-md" />
     </div>
 
-    <div v-if="midReport || endReport" class="space-y-4 mt-4">
-      <div v-if="midReport" class="p-4 bg-white border rounded shadow-sm">
-        <h2 class="font-semibold text-blue-700 mb-2">📝 중간 보고서</h2>
-        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ midReport }}</p>
+    <!-- 보고서 카드 -->
+    <div class="space-y-4">
+      <div v-if="midReport" class="p-4 bg-white border rounded-xl shadow-sm">
+        <h2 class="font-semibold text-blue-700 mb-2 text-base md:text-lg">📝 중간 보고서</h2>
+        <p class="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{{ midReport }}</p>
       </div>
 
-      <div v-if="endReport" class="p-4 bg-white border rounded shadow-sm">
-        <h2 class="font-semibold text-purple-700 mb-2">📘 월말 보고서</h2>
-        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ endReport }}</p>
+      <div v-if="endReport" class="p-4 bg-white border rounded-xl shadow-sm">
+        <h2 class="font-semibold text-purple-700 mb-2 text-base md:text-lg">📘 월말 보고서</h2>
+        <p class="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{{ endReport }}</p>
       </div>
     </div>
 
-    <p v-if="!midReport && !endReport && studentId && month" class="text-sm text-gray-500">
+    <!-- 없을 때 안내 -->
+    <p v-if="!midReport && !endReport && studentId && month" class="text-gray-500 text-sm">
       선택한 월의 보고서가 없습니다.
     </p>
 
-    <p v-if="error" class="text-red-500 text-sm mt-2">{{ error }}</p>
+    <!-- 에러 -->
+    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
   </div>
 </template>

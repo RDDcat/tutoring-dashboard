@@ -85,14 +85,18 @@ const loadStats = async (month, targetRef) => {
   }
 }
 </script>
-
 <template>
-  <div class="max-w-3xl mx-auto space-y-8">
-    <h1 class="text-2xl font-bold text-gray-800">📊 학부모 대시보드</h1>
+  <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+    <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center sm:text-left">
+      📊 학부모 대시보드
+    </h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white border rounded shadow p-4 space-y-2">
-        <h2 class="font-semibold text-blue-700">📅 당월 통계 ({{ thisMonth }})</h2>
+      <!-- 당월 -->
+      <div class="bg-white border rounded-xl shadow p-5 space-y-2">
+        <h2 class="text-base sm:text-lg font-semibold text-blue-700">
+          📅 당월 통계 ({{ thisMonth }})
+        </h2>
         <p>
           수업 횟수: <strong>{{ thisMonthStats.lessons }}</strong> 회
         </p>
@@ -107,8 +111,11 @@ const loadStats = async (month, targetRef) => {
         </p>
       </div>
 
-      <div class="bg-white border rounded shadow p-4 space-y-2">
-        <h2 class="font-semibold text-purple-700">📅 전월 통계 ({{ prevMonth }})</h2>
+      <!-- 전월 -->
+      <div class="bg-white border rounded-xl shadow p-5 space-y-2">
+        <h2 class="text-base sm:text-lg font-semibold text-purple-700">
+          📅 전월 통계 ({{ prevMonth }})
+        </h2>
         <p>
           수업 횟수: <strong>{{ prevMonthStats.lessons }}</strong> 회
         </p>
@@ -124,6 +131,6 @@ const loadStats = async (month, targetRef) => {
       </div>
     </div>
 
-    <p v-if="error" class="text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
   </div>
 </template>

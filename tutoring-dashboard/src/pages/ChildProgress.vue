@@ -87,14 +87,16 @@ watch([studentId, month], async () => {
   endReportSubmitted.value = reports.some((r) => r.type === '월말')
 })
 </script>
-
 <template>
-  <div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-gray-800">📊 자녀 진행 현황</h1>
+  <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center sm:text-left">
+      📊 자녀 진행 현황
+    </h1>
 
-    <div class="space-y-2">
-      <label class="block font-medium">자녀 선택</label>
-      <select v-model="studentId" class="w-full p-2 border rounded">
+    <!-- 자녀 선택 -->
+    <div class="space-y-1">
+      <label class="block font-medium text-sm sm:text-base">자녀 선택</label>
+      <select v-model="studentId" class="block w-full p-2 border rounded-md">
         <option disabled value="">자녀를 선택하세요</option>
         <option v-for="child in children" :key="child.id" :value="child.id">
           {{ child.name }}
@@ -102,25 +104,27 @@ watch([studentId, month], async () => {
       </select>
     </div>
 
-    <div class="space-y-2">
-      <label class="block font-medium">대상 월</label>
-      <input v-model="month" type="month" class="w-full p-2 border rounded" />
+    <!-- 월 선택 -->
+    <div class="space-y-1">
+      <label class="block font-medium text-sm sm:text-base">대상 월</label>
+      <input v-model="month" type="month" class="block w-full p-2 border rounded-md" />
     </div>
 
-    <div v-if="studentId" class="mt-4 space-y-4 bg-white p-4 border rounded shadow-sm">
-      <p class="text-sm text-gray-800">
+    <!-- 진행 통계 카드 -->
+    <div v-if="studentId" class="mt-4 bg-white p-4 border rounded-xl shadow space-y-3">
+      <p class="text-sm md:text-base text-gray-800">
         📚 수업 횟수: <strong>{{ totalLessons }}</strong> 회
       </p>
-      <p class="text-sm text-gray-800">
+      <p class="text-sm md:text-base text-gray-800">
         ⏱️ 총 수업 시간: <strong>{{ totalHours.toFixed(1) }}</strong> 시간
       </p>
-      <p class="text-sm text-gray-800">
+      <p class="text-sm md:text-base text-gray-800">
         📝 중간 보고서:
         <span :class="midReportSubmitted ? 'text-green-600' : 'text-red-500'">
           {{ midReportSubmitted ? '제출됨' : '미제출' }}
         </span>
       </p>
-      <p class="text-sm text-gray-800">
+      <p class="text-sm md:text-base text-gray-800">
         📘 월말 보고서:
         <span :class="endReportSubmitted ? 'text-green-600' : 'text-red-500'">
           {{ endReportSubmitted ? '제출됨' : '미제출' }}
@@ -128,6 +132,6 @@ watch([studentId, month], async () => {
       </p>
     </div>
 
-    <p v-if="error" class="text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
   </div>
 </template>

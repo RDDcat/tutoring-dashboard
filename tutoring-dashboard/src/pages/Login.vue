@@ -1,21 +1,35 @@
 <template>
-  <div class="flex justify-center items-center min-h-screen bg-gray-100">
-    <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg space-y-6">
-      <h2 class="text-2xl font-bold text-center">로그인</h2>
-      <input v-model="email" type="email" placeholder="이메일" class="w-full p-2 border rounded" />
-      <input
-        v-model="password"
-        type="password"
-        placeholder="비밀번호"
-        class="w-full p-2 border rounded"
-      />
-      <button @click="login" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+  <div class="min-h-screen flex justify-center items-center bg-gray-100 px-4 sm:px-6">
+    <div class="w-full max-w-md bg-white p-6 sm:p-8 rounded-xl shadow-lg space-y-6">
+      <h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-center">🔐 로그인</h2>
+
+      <div class="space-y-2">
+        <input
+          v-model="email"
+          type="email"
+          placeholder="이메일"
+          class="w-full p-3 border rounded-md text-sm"
+        />
+        <input
+          v-model="password"
+          type="password"
+          placeholder="비밀번호"
+          class="w-full p-3 border rounded-md text-sm"
+        />
+      </div>
+
+      <button
+        @click="login"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-medium"
+      >
         로그인
       </button>
-      <p v-if="error" class="text-red-500 text-sm text-center">{{ error }}</p>
+
+      <p v-if="error" class="text-red-500 text-sm text-center mt-2">{{ error }}</p>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -30,7 +44,6 @@ const router = useRouter()
 const login = async () => {
   error.value = null
 
-  // 1. 로그인 시도
   const { data, error: authError } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value,
@@ -41,12 +54,10 @@ const login = async () => {
     return
   }
 
-  // 2. 로그인 성공 → 사용자 정보 가져오기
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // 3. users 테이블에서 이름, 역할 가져오기
   const { data: userInfo, error: userError } = await supabase
     .from('users')
     .select('*')
@@ -58,11 +69,9 @@ const login = async () => {
     return
   }
 
-  // 4. Pinia에 저장
   const store = useUserStore()
   store.setUser(userInfo)
 
-  // 5. 이동
   router.push('/dashboard')
 }
 </script>
